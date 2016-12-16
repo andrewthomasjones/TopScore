@@ -30,7 +30,7 @@ tsp1 <- tspcalc(dat,grp)
 # predict(tsp1,eSet2)
 Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 Rcpp::sourceCpp('Tsp_C++.cpp')
-Rcpp::sourceCpp('Tsp_C2.cpp')
+Rcpp::sourceCpp('Tsp_C2.cpp') #doesnt check if disjoint
 
 ###################################################
 # tie breaker differs from Tan et al 2005. Unsure why.
