@@ -1,5 +1,6 @@
 #source("https://bioconductor.org/biocLite.R")
 #biocLite("tspair")
+#biocLite("ktspair")
 
 library(tcltk)
 library(Rcpp)
@@ -28,7 +29,8 @@ tsp1 <- tspcalc(dat,grp)
 # #predict
 # predict(tsp1,eSet2)
 Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
-Rcpp::sourceCpp('/windowsDrive/Users/Andy/Dropbox/Work/TSP/TSP/Tsp_C++.cpp')
+Rcpp::sourceCpp('Tsp_C++.cpp')
+Rcpp::sourceCpp('Tsp_C2.cpp')
 
 ###################################################
 # tie breaker differs from Tan et al 2005. Unsure why.
