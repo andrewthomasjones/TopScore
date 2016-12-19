@@ -20,6 +20,10 @@ dat_test <- dat[1:50, c(1:5, 45:50)]
 grp_test <- grp[c(1:5, 45:50)]
 dat_test2 <- dat[1:50, c(20:25, 40:45)]
 
+#dijoint pair only 
+mode=F
+
+
 tsp1 <- tspcalc(dat,grp)
 # tspplot(tsp1)
 # 
@@ -29,12 +33,12 @@ tsp1 <- tspcalc(dat,grp)
 # #predict
 # predict(tsp1,eSet2)
 Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
-Rcpp::sourceCpp('Tsp_C++.cpp')
+#Rcpp::sourceCpp('Tsp_C++.cpp')
 Rcpp::sourceCpp('Tsp_C2.cpp') #doesnt check if disjoint
 
 ###################################################
 # tie breaker differs from Tan et al 2005. Unsure why.
-ktsp<-function(dat, grp, k=1, weights = rep(1,n)){
+ktsp<-function(dat, grp, k=1, d_mode=F, weights = rep(1,n) ){
     
   #convert to numbers, keep labels for later
   numGrp <- as.numeric(factor(grp))
@@ -47,7 +51,7 @@ ktsp<-function(dat, grp, k=1, weights = rep(1,n)){
 
   
   #send into C  
-  pairs <- getData(dat, numGrp,  k, weights)
+  pairs <- getData(dat, numGrp,  k, weights, d_mode)
   # r indexing
   pairs [,1:2] <-pairs [,1:2]+1 
   colnames(pairs)= c("1st","2nd","delta", "gamma")
@@ -104,7 +108,7 @@ classifyAda <-function(dat, tsp_classif){
 
 ###################################################
 #bagging loop
-bagger <- function(dat,grp,M){
+bagger <- function(dat,grp,d_mode, M){
   #convert to numbers, keep labels for later
   numGrp <- as.numeric(factor(grp))
   numGrp2 <- 2*(as.numeric(factor(grp))-1.5)
@@ -117,7 +121,7 @@ bagger <- function(dat,grp,M){
   #bootstrap resample
   for(m in 1:M){
     samp <-sample(n)
-    pairs[m,] <- getData(dat[,samp], numGrp[samp],  1, rep(1,n))
+    pairs[m,] <- getData(dat[,samp], numGrp[samp],  1, rep(1,n), d_mode)
     
   }
   pairs[,1:2]<-pairs[,1:2]+1
@@ -146,7 +150,7 @@ newweight <-function(weight, alpha, classes, grp){
 
 
 #boosting loop
-booster <- function(dat,grp,M=5){
+booster <- function(dat,grp,d_mode,M=5){
   
   if(M==0){
     #put something for non-fixed iterations, stopping conditions
@@ -173,7 +177,7 @@ booster <- function(dat,grp,M=5){
   
   for(m in 1:M){
     weightM[m,] <- weight 
-    pairM[[m]] <- ktsp( dat,numGrp, 1, weight)
+    pairM[[m]] <- ktsp( dat,numGrp, 1, d_mode, weight )
     classesM[m,] <- classify(dat, pairM[[m]])
     confuseM[m,,]<-table(numGrp2 ,classesM[m,])
     errM[m] <- (confuseM[m,2,1]+confuseM[m,1,2] ) /sum(confuseM[m,,]) 
@@ -196,7 +200,7 @@ booster <- function(dat,grp,M=5){
 
 
 #boosting loop
-kbooster <- function(dat,grp,M=5, k=3){
+kbooster <- function(dat,grp,M=5, k=3, mode){
   
   if(M==0){
     #put something for non-fixed iterations, stopping conditions
@@ -223,7 +227,7 @@ kbooster <- function(dat,grp,M=5, k=3){
   i=1
   for(m in 1:M){
     weightM[m,] <- weight 
-    pairM[[m]] <- ktsp( dat,numGrp, k, weight)
+    pairM[[m]] <- ktsp( dat,numGrp, k,  mode,weight)
     classesM[m,] <- classify(dat, pairM[[m]])
     confuseM[m,,]<-table(numGrp2 ,classesM[m,])
     errM[m] <- (confuseM[m,2,1]+confuseM[m,1,2] ) /sum(confuseM[m,,]) 
@@ -276,23 +280,61 @@ boosterCI<- function(data, indices){
 ##########################################################################
 
 #testing
-tsp1<-ktsp(dat,grp ,7)
-tsp1
-tsp2<-bagger(dat, grp , 10)
-tsp3<-booster(dat, grp, 20)
 
-tspk<-kbooster(dat, grp, 2)
+#tsp1
 
-#tsp3<-bagger(dat, grp ,100)
+tsp2<-ktsp(dat,grp,20, F)
+#tsp2
+
+ # cl1<-classify(dat,tsp1)
+ # cl2<-classify(dat,tsp2)
+ # 
+ # table(tsp1$labels_group ,cl1)
+ # table(tsp2$labels_group ,cl2)
+ 
+
+tsp2<-bagger(dat, grp , F, 10)
+
+tsp3<-booster(dat, grp, F)
+# 
+
+
+tsp1<-ktsp(dat,grp,9, T)
+tspk<-kbooster(dat, grp, M=3, k=2, mode=F)
 cl1<-classify(dat,tsp1)
-cl2<-classify(dat,tsp2)
-cl3<-classifyAda(dat,tspk)
-
+clk<-classifyAda(dat,tspk)
 table(tsp1$labels_group ,cl1)
+table(tsp3$labels_group ,clk)
+
+# 
+# #tsp3<-bagger(dat, grp ,100)
+
+cl2<-classify(dat,tsp2)
+cl3<-classifyAda(dat,tsp3)
+
+# 
+
 table(tsp2$labels_group ,cl2)
 table(tsp3$labels_group ,cl3)
-
-boot(data=t(dat), statistic=boosterCI, R=100)
+table(tsp3$labels_group ,clk)
+# # 
+# 
+# 
+# 
+# boot(data=t(dat), statistic=boosterCI, R=100)
+# 
+##################################################
+#LOOCV
+err<-0
+numGrp2 <- 2*(as.numeric(factor(grp))-1.5)
+for(i in 1:length(grp)){
+  print(paste(i, " of ",length(grp) ))
+  full<-kbooster(dat[,-i], grp[-i], M=25, k=1, mode=F)
+  iclass<-classifyAda(dat[,c(i,1)], full)[1]
+  err<-err+as.numeric(iclass==numGrp2[i])
+}
+err/length(grp)
+#################################################
 
 ##################################################
 #LOOCV
@@ -300,7 +342,7 @@ err<-0
 numGrp2 <- 2*(as.numeric(factor(grp))-1.5)
 for(i in 1:length(grp)){
   print(paste(i, " of ",length(grp) ))
-  full<-kbooster(dat[,-i], grp[-i], 100,3)
+  full<-ktsp(dat,grp, 5, T)
   iclass<-classify(dat[,c(i,1)], full)[1]
   err<-err+as.numeric(iclass==numGrp2[i])
 }

@@ -4,7 +4,7 @@
 #labels in grp  1 x N
 #levels in dat  N x G
 library(tspair)
-library(bigmemory)
+#library(bigmemory)
 data(tspdata)
 
 #prob. function with weights
@@ -12,7 +12,6 @@ data(tspdata)
 #  pij <-sum(weight*(ilevels<jlevels))/length(ilevels)
 #  return(pij)
 #}
-
 
 ##weighted pr function, uses p. defaults to unweighted if none supplied
 #wpr <- function(dat, N, weight=rep(1,N)){

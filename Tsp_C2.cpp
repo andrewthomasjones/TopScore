@@ -44,7 +44,7 @@ vector<int> sort_indexes(vector<double> v) {
 
 
 // [[Rcpp::export]]
-mat getData(NumericMatrix obsvData, NumericVector  labels,  int n_pair, NumericVector  weights){
+mat getData(NumericMatrix obsvData, NumericVector  labels,  int n_pair, NumericVector  weights, bool disjoint_mode){
     // creates Rcpp matrix from SEXP
     int p = obsvData.nrow(), n = obsvData.ncol();
     mat matData(obsvData.begin(), p, n, false);
@@ -193,23 +193,30 @@ mat getData(NumericMatrix obsvData, NumericVector  labels,  int n_pair, NumericV
         //get pair 
         divresult2 = div(test[j+choose2],p);
         
-        //check is a new disjoint pair
-        //bool A = (find(pairList.begin(), pairList.end(), divresult2.quot) != pairList.end());
-        //bool B = (find(pairList.begin(), pairList.end(), divresult2.rem) != pairList.end());
-        //if(!A & !B){
+        
+        bool A = false;
+        bool B = false;
+        
+        if(disjoint_mode == true){
+          //check is a new disjoint pair
+           A = (find(pairList.begin(), pairList.end(), divresult2.quot) != pairList.end());
+           B = (find(pairList.begin(), pairList.end(), divresult2.rem) != pairList.end());
+        }
+        //std::cout<< "A: " << A <<   " B: " << B <<  std::endl;
+        if(!A & !B){
           if(i==n_pair){
             //enough pairs already
             break;
           }else{
-          output(i,0) = divresult2.quot;
-          output(i,1) = divresult2.rem;
-          output(i,2) = delta(output(i,0),output(i,1));
-          output(i,3) = gamma(output(i,0),output(i,1));
-          i++;
-          pairList.push_back(divresult2.quot);
-          pairList.push_back(divresult2.rem);
+            output(i,0) = divresult2.quot;
+            output(i,1) = divresult2.rem;
+            output(i,2) = delta(output(i,0),output(i,1));
+            output(i,3) = gamma(output(i,0),output(i,1));
+            i++;
+            pairList.push_back(divresult2.quot);
+            pairList.push_back(divresult2.rem);
           }
-       // }
+       }
         
         scoreList.erase(result);
         
